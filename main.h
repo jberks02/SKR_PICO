@@ -28,8 +28,14 @@
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
+#include "pico/multicore.h"
 #include "hardware/adc.h"
-#include "hardware/uart.h"
+
+/*
+    * MY HEADERS
+*/
+
+#include "./modules/Stepper.cpp"
 
 #ifdef __cplusplus
 extern "C"

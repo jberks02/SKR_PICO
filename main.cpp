@@ -10,31 +10,25 @@
 #include "main.h"
 using namespace std;
 
-int main()
-{
-    const uint LED = PICO_DEFAULT_LED_PIN;
-
-    gpio_init(LED);
-
-    gpio_set_dir(LED, GPIO_OUT);
+int main() {
 
     stdio_init_all();
 
-    int a = 4;
+    const uint HE = 23;
 
-    int b = 8;
+    gpio_init(HE);
+    gpio_set_dir(HE, GPIO_OUT);
 
-    int c = a + b; 
+    Stepper stepper_one(12, 11, 10);
 
-    cout << c << '\n';
-
-    while (true)
-    {
+    while (true) {
         cout << "Deadly Virus";
-        gpio_put(LED, 1);
-        sleep_ms(a * 100);
-        gpio_put(LED, 0);
-        sleep_ms(b * 100);
+        gpio_put(HE, 1);
+        stepper_one.move_by_step(500, 'r');
+        sleep_ms(1000);
+        gpio_put(HE, 0);
+        stepper_one.move_by_step(500, 'f');
+        sleep_ms(5000);
     }
 
     return 0;
