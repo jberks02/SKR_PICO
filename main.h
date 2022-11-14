@@ -1,5 +1,5 @@
 /*
- * picoCPP for Raspberry Pi Pico
+ * SKR PICO
  *
  * @version     1.0.0
  * @author      Justin Berkshire
@@ -30,12 +30,14 @@
 #include "hardware/spi.h"
 #include "pico/multicore.h"
 #include "hardware/adc.h"
+// #include "hardware/uart.h"
 
-/*
-    * MY HEADERS
-*/
-
+// MY HEADERS
+#include "./structs/Peripherals.cpp"
+#include "./structs/StepMove.cpp"
 #include "./modules/Stepper.cpp"
+#include "./modules/SynchronousMovement.cpp"
+#include "./modules/UartInterface.cpp"
 
 #ifdef __cplusplus
 extern "C"
