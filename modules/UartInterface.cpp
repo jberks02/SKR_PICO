@@ -38,17 +38,18 @@ class UartTCM2209Interface {
         return returnMessage;
         
     }
-    public: void write_to_register(uint8_t address, uint8_t *message, int messageLength) {
+    public: void write_to_register(uint8_t address, uint8_t registerAddress uint8_t *message[4]) {
         //don't except address over range 0...3
         if(address > 3) return;
 
-        uint8_t msg[2 + messageLength];
+        uint8_t msg[3 + 4];
 
         msg[0] = sync;
-        msg [1] = address >> 1;
+        msg [1] = address;
+        msg[2] = registerAddress >> 1;
 
-        for(int i = 2; i < messageLength;i++) {
-            msg[i] = message[i - 2];
+        for(int i = 0; i < 4;i++) {
+            msg[i + 3] = message[i];
         }
 
         uart_puts(uart1, ((const char*) msg));
