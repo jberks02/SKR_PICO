@@ -1,5 +1,9 @@
 #include "../main.h"
 
+#define GCONF_REG _u(0x00)
+#define GSTAT_REG _u(0x01)
+#define BITTIME_REG _u(0x03)
+
 class Stepper {
     private: uint en;
     private: uint step;
@@ -12,8 +16,12 @@ class Stepper {
     private: float stepAngleMultiplier;
     private: float currentAngle = 0.f;
     public: bool homed = false;
-    public: Stepper(uint en, uint step, uint dir, uint addresss) {
+    private: UartTCM2209Interface *interface;
+    private: int gconf[32];
+    private: int gstat[32];
+    public: Stepper(uint en, uint step, uint dir, uint addresss, UartTCM2209Interface *interface) {
         //assign passed pins to local class
+        this->interface = interface;
         this->en = en;
         this->step = step;
         this->dir = dir;
@@ -29,9 +37,16 @@ class Stepper {
         gpio_set_dir(dir, GPIO_OUT);
         gpio_pull_up(dir);
 
-        gpio_put(this->en, 1);
+       enable(false);
 
         setStepAngleMultiplier();
+
+        uint8_t max_delay[4] = { 255, 255, 255, 255 };
+
+        // interface->write_to_register(address, BITTIME_REG, max_delay);
+
+        readAndPostResponse(gconf, GCONF_REG);
+        readAndPostResponse(gstat, GSTAT_REG);
         
     }
     private: void setStepAngleMultiplier() {
@@ -90,6 +105,20 @@ class Stepper {
         }
 
         if(hold == false) enable(false);
+    }
+    private: void readAndPostResponse(int bits[32], uint8_t reg) {
+
+        enable(true);
+        
+        uint8_t *msg = interface->read_register(address, reg);
+
+        TcmReadResponse response(msg);
+
+        for(int i = 0; i < 32; i++) {
+            bits[i] = response.dataBits[i];
+        }
+
+        enable(false);
 
     }
 };

@@ -21,10 +21,12 @@ int main() {
 
     Peripherals machine;
 
-    Stepper stepper_one(15, 14, 13, 0);
-    Stepper stepper_two(12,11,10, 1);
-    Stepper stepper_three(7,6,5, 2);
-    Stepper stepper_four(2,19,28, 3);
+    UartTCM2209Interface tcmCommunication;
+
+    Stepper stepper_one(15, 14, 13, 0, &tcmCommunication);
+    Stepper stepper_two(12,11,10, 1, &tcmCommunication);
+    Stepper stepper_three(7,6,5, 2, &tcmCommunication);
+    Stepper stepper_four(2,19,28, 3, &tcmCommunication);
 
     SynchronousMovement steppers(&stepper_one, &stepper_two, &stepper_three, &stepper_four, &machine);
 
