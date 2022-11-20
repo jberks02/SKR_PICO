@@ -90,6 +90,35 @@ class gconf_maintainer: protected tmc_register_base {
     public: gconf_maintainer() {
         constructReadChar(reg, read);
     }
+    public: void process_new_data(uint8_t *full_message) {
+        uint8_t dataMessage[4];
+
+        for(int i = 0; i < 4; i++) {
+            dataMessage[i] = full_message[i+3];
+        }
+
+        byteswap(dataMessage);
+
+        uint32_t dataFullUint =  dataMessage[0] | (dataMessage[1] << 8) | (dataMessage[2] << 16) | (dataMessage[3] << 24);
+
+        bitset<32> newBitData(dataFullUint);
+
+        for(int i = 0;i < 32;i++) {
+            bitdata[i] = newBitData[i];
+        }
+
+        set_i_scale(bitdata[0]);
+        set_internal_rSense(bitdata[1]);
+        set_spreadCycle(bitdata[2]);
+        set_shaft(bitdata[3]);
+        set_index_otpw(bitdata[4]);
+        set_index_step(bitdata[5]);
+        set_pdn_disable(bitdata[6]);
+        set_step_reg_select(bitdata[7]);
+        set_multistep_filter(bitdata[8]);
+        set_test_mode(bitdata[9]);
+        
+    }
     public: void set_i_scale(bool set) {
         i_scale = set;
         bitdata[0] = set;
