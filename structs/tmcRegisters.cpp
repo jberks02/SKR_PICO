@@ -5,6 +5,20 @@ class tmc_register_base {
 
     private: uint8_t sync = 0b1010000;
 
+    protected: UartTCM2209Interface interface = UartInterface();
+
+    protected: void consumeDataMessage(uint8_t *dataMessage, bitset<32> existing_bitset, int bitLength) {
+        
+        uint32_t dataFullUint =  dataMessage[6] | (dataMessage[5] << 8) | (dataMessage[4] << 16) | (dataMessage[3] << 24);
+
+        bitset<32> newBitData(dataFullUint);
+
+        for(int i = 0;i < bitLength;i++) {
+            existing_bitset[i] = newBitData[i];
+        }
+
+    }
+
     protected: void constructReadChar(uint8_t reg, unsigned char *datagram) {
 
         datagram[0] = ((unsigned char)sync);
@@ -42,6 +56,7 @@ class tmc_register_base {
         tmp = data[1];
         data[1] = data[2];
         data[2] = tmp;
+
     }
     void swuart_calcCRC(unsigned char* datagram, int datagramLength) {
         int i,j;
@@ -68,6 +83,8 @@ class tmc_register_base {
         memcpy(dataByteArray, &data, 4);
 
         constructWriteChar(reg, write, dataByteArray);
+
+        interface.write_to_register(write);
         
     }
 };
@@ -89,23 +106,15 @@ class gconf_maintainer: protected tmc_register_base {
     public: unsigned char write[8];
     public: gconf_maintainer() {
         constructReadChar(reg, read);
+        update();
     }
-    public: void process_new_data(uint8_t *full_message) {
-        uint8_t dataMessage[4];
+    public: void update() {
 
-        for(int i = 0; i < 4; i++) {
-            dataMessage[i] = full_message[i+3];
-        }
+        uint8_t full_message[8];
 
-        byteswap(dataMessage);
-
-        uint32_t dataFullUint =  dataMessage[0] | (dataMessage[1] << 8) | (dataMessage[2] << 16) | (dataMessage[3] << 24);
-
-        bitset<32> newBitData(dataFullUint);
-
-        for(int i = 0;i < 32;i++) {
-            bitdata[i] = newBitData[i];
-        }
+        interface.read_register(read, full_message);
+        
+        consumeDataMessage(full_message, bitdata, 9);
 
         set_i_scale(bitdata[0]);
         set_internal_rSense(bitdata[1]);
@@ -208,5 +217,229 @@ class gconf_maintainer: protected tmc_register_base {
     }
     public: bool get_test_mode() {
         return test_mode;
+    }
+};
+
+class gstat_maintainer: protected tmc_register_base {
+    public: bitset<32> bitdata;
+    private: uint8_t reg = 0x01;
+    private: bool reset = false;
+    private: bool drv_err = false;
+    private: bool uv_cp = false;
+    public: unsigned char read[4];
+    public: gstat_maintainer() {
+        constructReadChar(reg, read);
+        update();
+    }
+    public: void update() {
+
+        uint8_t full_message[8];
+
+        interface.read_register(read, full_message);
+        
+        consumeDataMessage(full_message, bitdata, 3);
+
+        reset = bitdata[0];
+        drv_err = bitdata[1];
+        uv_cp = bitdata[2];
+        
+    }
+    public: bool get_reset() {
+        return reset;
+    }
+    public: bool get_drv_err() {
+        return drv_err;
+    }
+    public: bool get_uv_cp() {
+        return uv_cp;
+    }
+};
+
+class ifcnt: protected tmc_register_base {
+    public: bitset<32> bitdata;
+    private: uint8_t reg = 0x02;
+    private: uint8_t count = 0;
+    public: unsigned char read[4];
+    public: ifcnt() {
+        constructReadChar(reg, read);
+        update();
+    }
+    public: void update() {
+        
+        uint8_t full_message[8];
+
+        interface.read_register(read, full_message);
+        
+        consumeDataMessage(full_message, bitdata, 3);
+
+        for(int i = 0; i < 8; i++) {
+            count | (bitdata[i] << i);
+        }
+
+    }
+    public: uint8_t get_count() {
+        return count;
+    }
+};
+
+class otp_read: protected tmc_register_base {
+    public: bitset<32> bitdata;
+    private: uint8_t reg = 0x05;
+    private: uint8_t otp0 = 0;
+    private: uint8_t otp1 = 0;
+    private: uint8_t otp2 = 0;
+    public: unsigned char read[4];
+    public: otp_read() {
+        constructReadChar(reg, read);
+        update();
+    }
+    public: void update() {
+        uint8_t full_message[8];
+
+        interface.read_register(read, full_message);
+        
+        consumeDataMessage(full_message, bitdata, 3);
+
+        for(int i = 0; i < 8; i++) {
+            otp0 | (bitdata[i] << i);
+        }
+        for(int i = 8; i < 16; i++) {
+            otp1 | (bitdata[i] << i);
+        }
+        for(int i = 16; i < 24; i++) {
+            otp2 | (bitdata[i] << i);
+        }
+        
+    }
+    public: uint8_t get_otp0() {
+        return otp0;
+    }
+    public: uint8_t get_otp1() {
+        return otp1;
+    }
+    public: uint8_t get_otp2() {
+        return otp2;
+    }
+};
+
+class inputPinStates: protected tmc_register_base {
+    public: bitset<32> bitdata;
+    private: uint8_t reg = 0x06;
+    private: bool ENN = false;
+    private: bool O1 = false;
+    private: bool MS1 = false;
+    private: bool MS2 = false;
+    private: bool DIAG = false;
+    private: bool O2 = false;
+    private: bool PDN_UART = false;
+    private: bool STEP = false;
+    private: bool SPREAD_EN = false;
+    private: bool DIR = false;
+    public: unsigned char read[4];
+    public: inputPinStates() {
+        constructReadChar(reg, read);
+        update();
+    }
+    public: void update() {
+
+        uint8_t full_message[8];
+
+        interface.read_register(read, full_message);
+        
+        consumeDataMessage(full_message, bitdata, 9);
+
+        ENN = bitdata[0];
+        O1 = bitdata[1];
+        MS1 = bitdata[2];
+        MS2 = bitdata[3];
+        DIAG = bitdata[4];
+        O2 = bitdata[5];
+        PDN_UART = bitdata[6];
+        STEP = bitdata[7];
+        SPREAD_EN = bitdata[8];
+        DIR = bitdata[9];
+        
+    }
+    public: bool get_ENN() {
+        return ENN;
+    }
+    public: bool get_O1() {
+        return O1;
+    }
+    public: bool get_MS1() {
+        return MS1;
+    }
+    public: bool get_MS2() {
+        return MS2;
+    }
+    public: bool get_DIAG() {
+        return DIAG;
+    }
+    public: bool get_O2() {
+        return O2;
+    }
+    public: bool get_PDN_UART() {
+        return PDN_UART;
+    }
+    public: bool get_STEP() {
+        return STEP;
+    }
+    public: bool get_SPREAD_EN() {
+        return SPREAD_EN;
+    }
+    public: bool get_DIR() {
+        return DIR;
+    }
+};
+
+class factory_conf: protected tmc_register_base {
+    public: bitset<32> bitdata;
+    public: uint8_t reg = 0x07;
+    public: unsigned char read[4];
+    public: unsigned char write[8];
+    private: uint8_t fclktrim = 0;//bit 4..0
+    private: uint8_t ottrim = 0;//bit 9..8
+    public: factory_conf() {
+        constructReadChar(reg, read);
+        update();
+    }
+    public: void update() {
+
+        uint8_t full_message[8];
+
+        interface.read_register(read, full_message);
+        
+        consumeDataMessage(full_message, bitdata, 10);
+
+        fclktrim = bitdata[0] | (bitdata[1] << 1) | (bitdata[2] << 2) | (bitdata[3] << 3);
+
+        ottrim = bitdata[8] | (bitdata[9] << 1);
+
+    }
+    public: uint8_t get_fclktrim() {
+        return fclktrim;
+    }
+    public: uint8_t get_ottrim() {
+        return ottrim;
+    }
+    public: void set_fclktrim(uint8_t val) {
+        if(val > 15) return;
+        fclktrim = val;
+        bitset<4> newBits(val);
+        for(int i = 0; i < 4; i++) {
+            bitdata[i] = newBits[i];
+        };
+        uint32_t data = bitdata.to_ulong();
+        setWrite(data, write, reg);
+    }
+    public: void set_ottrim(uint8_t val) {
+        if(val > 3) return;
+        ottrim = val;
+        bitset<2> newBits(val);
+        for(int i = 0; i < 2; i++) {
+            bitdata[i + 8] = newBits[i]; 
+        }
+        uint32_t data = bitdata.to_ulong();
+        setWrite(data, write, reg);
     }
 };

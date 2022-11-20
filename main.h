@@ -34,11 +34,11 @@
 // #include "hardware/uart.h"
 
 // MY HEADERS
+#include "./modules/UartInterface.cpp"
 #include "./structs/tmcRegisters.cpp"
 #include "./structs/tcmReadResponse.cpp"
 #include "./structs/Peripherals.cpp"
 #include "./structs/StepMove.cpp"
-#include "./modules/UartInterface.cpp"
 #include "./modules/Stepper.cpp"
 #include "./modules/SynchronousMovement.cpp"
 
