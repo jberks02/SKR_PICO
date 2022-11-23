@@ -5,7 +5,7 @@ class tmc_register_base {
 
     private: uint8_t sync = 0b1010000;
 
-    protected: UartTCM2209Interface interface = UartInterface();
+    protected: UartTCM2209Interface interface = UartTCM2209Interface();
 
     protected: void consumeDataMessage(uint8_t *dataMessage, bitset<32> existing_bitset, int bitLength) {
         
@@ -19,29 +19,25 @@ class tmc_register_base {
 
     }
 
-    protected: void constructReadChar(uint8_t reg, unsigned char *datagram) {
+    protected: void constructReadChar(uint8_t reg, uint8_t *datagram) {
 
-        datagram[0] = ((unsigned char)sync);
-
-        datagram[1] = ((unsigned char)0);
-
-        datagram[2] = ((unsigned char)reg);
+        datagram[0] =sync;
+        datagram[1] =0;
+        datagram[2] =reg;
 
         swuart_calcCRC(datagram, 4);
 
     }
-    protected: void constructWriteChar(uint8_t reg, unsigned char *datagram, uint8_t *data) {
+    protected: void constructWriteChar(uint8_t reg, uint8_t *datagram, uint8_t *data) {
 
-        datagram[0] = ((unsigned char) sync);
-
-        datagram[1] = ((unsigned char) 0);
-
-        datagram[2] = ((unsigned char)reg >> 1);
+        datagram[0] = sync;
+        datagram[1] = 0;
+        datagram[2] =reg >> 1;
 
         byteswap(data);
 
         for(int i = 0; i < 4; i++) {
-            datagram[i + 3] = ((unsigned char) data[i]);
+            datagram[i + 3] = data[i];
         }
 
         swuart_calcCRC(datagram, 8);
@@ -220,22 +216,28 @@ class gconf_maintainer: protected tmc_register_base {
     }
 };
 
-class gstat_maintainer: protected tmc_register_base {
+class gstat: protected tmc_register_base {
     public: bitset<32> bitdata;
+    private: uint enable_pin;
     private: uint8_t reg = 0x01;
     private: bool reset = false;
     private: bool drv_err = false;
     private: bool uv_cp = false;
-    public: unsigned char read[4];
-    public: gstat_maintainer() {
+    public: uint8_t read[4];
+    public: gstat(uint enable_pin) {
+        this->enable_pin = enable_pin;
         constructReadChar(reg, read);
         update();
     }
     public: void update() {
 
+        gpio_put(enable_pin, 0);
+
         uint8_t full_message[8];
 
         interface.read_register(read, full_message);
+
+        gpio_put(enable_pin, 1);
         
         consumeDataMessage(full_message, bitdata, 3);
 
@@ -265,6 +267,7 @@ class ifcnt: protected tmc_register_base {
         update();
     }
     public: void update() {
+
         
         uint8_t full_message[8];
 
@@ -285,9 +288,13 @@ class ifcnt: protected tmc_register_base {
 class otp_read: protected tmc_register_base {
     public: bitset<32> bitdata;
     private: uint8_t reg = 0x05;
-    private: uint8_t otp0 = 0;
-    private: uint8_t otp1 = 0;
-    private: uint8_t otp2 = 0;
+    private: uint8_t otp_fclktrim = 0;
+    private: bool otp_ottrim = false;
+    private: bool otp_internalRsense = false;
+    private: bool otp_tbl = false;
+    private: uint8_t otp_pwm_grad = 0;
+    private: bool otp_pwm_autograd = false;
+    private: uint8_t otp_tpwmthrs = 0;
     public: unsigned char read[4];
     public: otp_read() {
         constructReadChar(reg, read);
@@ -298,27 +305,16 @@ class otp_read: protected tmc_register_base {
 
         interface.read_register(read, full_message);
         
-        consumeDataMessage(full_message, bitdata, 3);
+        consumeDataMessage(full_message, bitdata, 24);
 
-        for(int i = 0; i < 8; i++) {
-            otp0 | (bitdata[i] << i);
-        }
-        for(int i = 8; i < 16; i++) {
-            otp1 | (bitdata[i] << i);
-        }
-        for(int i = 16; i < 24; i++) {
-            otp2 | (bitdata[i] << i);
-        }
-        
-    }
-    public: uint8_t get_otp0() {
-        return otp0;
-    }
-    public: uint8_t get_otp1() {
-        return otp1;
-    }
-    public: uint8_t get_otp2() {
-        return otp2;
+        otp_fclktrim =  bitdata[0] << bitdata[1] << bitdata[2] << bitdata[3] << bitdata[4]; 
+        otp_pwm_grad = bitdata[8] << bitdata[9] << bitdata[10] << bitdata[11];
+        otp_tpwmthrs = bitdata[13] << bitdata[14] << bitdata[15];
+        otp_ottrim = bitdata[5];    
+        otp_internalRsense = bitdata[6];    
+        otp_tbl = bitdata[7];
+        otp_pwm_autograd = bitdata[12];
+
     }
 };
 

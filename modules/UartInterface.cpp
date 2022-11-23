@@ -17,15 +17,21 @@ class UartTCM2209Interface {
         gpio_pull_up(rx);
         gpio_pull_up(tx);
         //Set up uart init
-        uart_init(uart1, 9600);
+        uart_init(uart1, 115200);
         gpio_set_function(rx, GPIO_FUNC_UART);
         gpio_set_function(rx, GPIO_FUNC_UART);
     }
-    public: void read_register(unsigned char *read, uint8_t *fullReturn) {
-        
-        uart_puts(uart1, ((const char*) read));
+    public: void read_register(uint8_t *read, uint8_t *fullReturn) {
 
-        uart_read_blocking(uart1, fullReturn, 8);
+        uint8_t read_as_list[4];
+
+        for(int i = 0;i < 4; i++) {
+            read_as_list[i] = read[i];
+        }
+        
+        uart_puts(uart1, ((const char*) read_as_list));
+
+        uart_read_blocking(uart1, fullReturn, 4);
 
     }
     public: void write_to_register(unsigned char *write) {
@@ -34,5 +40,3 @@ class UartTCM2209Interface {
 
     }
 };
-
-UartTCM2209Interface UartInterface();

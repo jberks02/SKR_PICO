@@ -15,6 +15,7 @@ class Stepper {
     private: uint stepMode = 1;
     private: float stepAngleMultiplier;
     private: float currentAngle = 0.f;
+    protected: gstat *s_gstat = NULL;
     public: bool homed = false;
     public: Stepper(uint en, uint step, uint dir, uint addresss) {
         //assign passed pins to local class
@@ -36,6 +37,8 @@ class Stepper {
         enable(false);
 
         setStepAngleMultiplier();
+
+        s_gstat = new gstat(en);
         
     }
     private: void setStepAngleMultiplier() {
